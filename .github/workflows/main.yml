@@ -1,0 +1,82 @@
+name: Reusable_Workflow
+
+on:
+  workflow_call:
+    secrets:
+      AWS_REGION:
+        description: "physical locations around the world where Amazon clusters data centers for application and service delivery in AWS Availability Zones"
+        required: true
+      AWS_ACCESS_KEY_ID:
+        description: ""
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        description: ""
+        required: true
+      GPR_AUTH_TOKEN:
+        description: ""
+        required: true
+      SENTRY_DSN_URL:
+        description: ""
+        required: true
+      SENTRY_TRACES_SAMPLE_RATE:
+        description: ""
+        required: true
+      ACCOUNT_ID:
+        description: ""
+        required: true
+      PRESGINED_URL_TTL:
+        description: ""
+        required: false
+      MAX_CONTENT_LENGTH_RANGE_PRESIGNED_URL:
+        description: ""
+        required: false
+      PAT_PAGALEVESOURCE_MANAGE_REPO:
+        description: ""
+        required: true
+
+jobs:
+  deploy-stage:
+    environment: stage
+    name: deploy-stage
+    runs-on: ubuntu-latest
+    env:
+      STAGE: stage
+      CONTEXT_ENV: dev
+      NODE_VERSION: 14.x
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.PAT_PAGALEVESOURCE_MANAGE_REPO }}
+          fetch-depth: 0
+
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Authenticate with GitHub package registry
+        run: |
+          echo "@pagaleve:registry=https://npm.pkg.github.com" > ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ env.GPR_AUTH_TOKEN }}" >> ~/.npmrc
+          echo "registry=https://registry.npmjs.com" >> ~/.npmrc
+
+      - name: Cache pnpm modules
+        uses: actions/cache@v2
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-
+
+      - uses: pnpm/action-setup@v2.1.0
+        with:
+          version: 6.29.2
+
+      - name: Install NPM Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Unit Test
+        run: pnpm run test:unit
