@@ -2,47 +2,26 @@ name: Reusable_Workflow
 
 on:
   workflow_call:
-    secrets:
-      AWS_REGION:
-        description: "physical locations around the world where Amazon clusters data centers for application and service delivery in AWS Availability Zones"
+    inputs:
+      environment:
+        type: string
+        description: environment to deploy
         required: true
-      AWS_ACCESS_KEY_ID:
-        description: ""
-        required: true
-      AWS_SECRET_ACCESS_KEY:
-        description: ""
-        required: true
-      GPR_AUTH_TOKEN:
-        description: ""
-        required: true
-      SENTRY_DSN_URL:
-        description: ""
-        required: true
-      SENTRY_TRACES_SAMPLE_RATE:
-        description: ""
-        required: true
-      ACCOUNT_ID:
-        description: ""
-        required: true
-      PRESGINED_URL_TTL:
-        description: ""
-        required: false
-      MAX_CONTENT_LENGTH_RANGE_PRESIGNED_URL:
-        description: ""
-        required: false
-      PAT_PAGALEVESOURCE_MANAGE_REPO:
-        description: ""
+      context:
+        type: string
+        description: context to get organization secrets.DEV_ACCOUNT_ID
         required: true
 
 jobs:
-  deploy-stage:
-    environment: stage
-    name: deploy-stage
+  deploy:
+    environment: ${{ inputs.environment }}
+    name: deploy-${{ inputs.environment }}
     runs-on: ubuntu-latest
     env:
-      STAGE: stage
-      CONTEXT_ENV: dev
+      STAGE: ${{ inputs.environment }}
+      CONTEXT_ENV: ${{ inputs.context }}
       NODE_VERSION: 14.x
+
     steps:
       - uses: actions/checkout@v2
         with:
@@ -59,7 +38,6 @@ jobs:
           echo "@pagaleve:registry=https://npm.pkg.github.com" > ~/.npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ env.GPR_AUTH_TOKEN }}" >> ~/.npmrc
           echo "registry=https://registry.npmjs.com" >> ~/.npmrc
-
       - name: Cache pnpm modules
         uses: actions/cache@v2
         with:
@@ -67,7 +45,6 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-
-
       - uses: pnpm/action-setup@v2.1.0
         with:
           version: 6.29.2
@@ -80,3 +57,40 @@ jobs:
 
       - name: Unit Test
         run: pnpm run test:unit
+
+      - name: Generating coverage badges
+        if: ${{ github.ref == 'refs/heads/main' || inputs.environment == 'stage' }}
+        uses: jpb06/jest-badges-action@latest
+        env:
+          HUSKY: 0
+          tag: "--no-verify"
+        with:
+          branches: main
+
+      - name: Deploy ${{ inputs.environment }}
+        if: ${{ inputs.environment != 'prod'  }}
+        run: pnpm run deploy -- ${{ inputs.environment }}
+        env:
+          AWS_REGION: ${{ secrets.DEV_AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
+
+      - name: Deploy prod
+        if: ${{ inputs.environment == 'prod' }}
+        run: pnpm run deploy -- prod
+        env:
+          AWS_REGION: ${{ secrets.PROD_AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
+
+      - name: Integration Test
+        if: ${{ inputs.environment != 'prod' }}
+        run: pnpm run test:e2e
+
+      - name: Release
+        if: ${{ inputs.environment == 'stage' }}
+        env:
+          GH_TOKEN: ${{ secrets.PAT_PAGALEVESOURCE_MANAGE_REPO }}
+          NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        run: HUSKY=0 npx semantic-release
