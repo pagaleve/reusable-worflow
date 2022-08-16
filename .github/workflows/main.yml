@@ -59,7 +59,7 @@ jobs:
         run: pnpm run test:unit
 
       - name: Generating coverage badges
-        if: ${{ github.ref == 'refs/heads/main' || inputs.environment == 'stage' }}
+        if: ${{ github.ref == 'refs/heads/main' && inputs.environment == 'stage' }}
         uses: jpb06/jest-badges-action@latest
         env:
           HUSKY: 0
