@@ -18,10 +18,9 @@ jobs:
     name: deploy-${{ inputs.environment }}
     runs-on: ubuntu-latest
     env:
-      STAGE: ${{ inputs.environment }}
       CONTEXT_ENV: ${{ inputs.context }}
       NODE_VERSION: 14.x
-      ACCOUNT_ID: ${{ secrets.DEV_ACCOUNT_ID }}
+      GPR_AUTH_TOKEN: ${{ secrets.GPR_AUTH_TOKEN }}
 
     steps:
       - uses: actions/checkout@v3
@@ -39,6 +38,7 @@ jobs:
           echo "@pagaleve:registry=https://npm.pkg.github.com" > ~/.npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ env.GPR_AUTH_TOKEN }}" >> ~/.npmrc
           echo "registry=https://registry.npmjs.com" >> ~/.npmrc
+
       - name: Cache pnpm modules
         uses: actions/cache@v2
         with:
@@ -46,6 +46,7 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-
+
       - uses: pnpm/action-setup@v2.1.0
         with:
           version: 6.29.2
@@ -90,6 +91,16 @@ jobs:
         if: ${{ inputs.environment != 'prod' }}
         run: pnpm run test:e2e
 
+      - name: Generate documentation
+        run: pnpm run gen-doc
+        env:
+          NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update readme
+        uses: readmeio/rdme@7.0.1
+        with:
+          rdme: openapi ./swagger-doc.json --key=${{secrets.README_API_KEY}} --id=${{secrets.README_API_DEFINITION_ID}}
+
       - name: Release
         if: ${{ inputs.environment == 'stage' }}
         env:
@@ -97,3 +108,74 @@ jobs:
           NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
         run: HUSKY=0 npx semantic-release
+
+  check_shared_modified:
+    needs: deploy
+    if: ${{ inputs.environment == 'stage' }}
+    name: check files on shared folder
+    env:
+      NODE_VERSION: 14.x
+    outputs:
+      shared_folder_modified: ${{ steps.check_modified_files.outputs.modified }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v24
+
+      - name: List all changed files
+        id: check_modified_files
+        run: |
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            if [[ $file != **/shared/* ]]; then
+              echo "::set-output name=modified::false"
+              continue
+            else
+              echo "::set-output name=modified::true"
+              break
+            fi
+          done
+
+  publish-gpr:
+    needs: check_shared_modified
+    if: needs.check_shared_modified.outputs.shared_folder_modified == 'true'
+    env:
+      NODE_VERSION: 14.x
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: https://npm.pkg.github.com/
+          scope: "@pagaleve"
+
+      - name: Cache pnpm modules
+        uses: actions/cache@v2
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-
+
+      - uses: pnpm/action-setup@v2.1.0
+        with:
+          version: 6.29.2
+
+      - name: Install NPM Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: publish
+        env:
+          GH_TOKEN: ${{ secrets.PAT_PAGALEVESOURCE_MANAGE_REPO }}
+          NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        run: pnpm publish
