@@ -18,9 +18,12 @@ jobs:
     name: deploy-${{ inputs.environment }}
     runs-on: ubuntu-latest
     env:
+      STAGE: ${{ inputs.environment }}
       CONTEXT_ENV: ${{ inputs.context }}
       NODE_VERSION: 14.x
       GPR_AUTH_TOKEN: ${{ secrets.GPR_AUTH_TOKEN }}
+      SENTRY_DSN_URL: ${{ secrets.SENTRY_DSN_URL }}
+      SENTRY_TRACES_SAMPLE_RATE: ${{ secrets.SENTRY_TRACES_SAMPLE_RATE }}
 
     steps:
       - uses: actions/checkout@v3
@@ -54,11 +57,24 @@ jobs:
       - name: Install NPM Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
-        run: pnpm run build
+      # - name: Build
+      #   run: pnpm run build
 
       - name: Unit Test
+        if: ${{ inputs.environment != 'prod'  }}
         run: pnpm run test:unit
+        env:
+          AWS_REGION: ${{ secrets.DEV_AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
+
+      - name: Unit Test
+        if: ${{ inputs.environment == 'prod'  }}
+        run: pnpm run test:unit
+        env:
+          AWS_REGION: ${{ secrets.PROD_AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
 
       - name: Generating coverage badges
         if: ${{ github.ref == 'refs/heads/main' && inputs.environment == 'stage' }}
@@ -90,6 +106,10 @@ jobs:
       - name: Integration Test
         if: ${{ inputs.environment != 'prod' }}
         run: pnpm run test:e2e
+        env:
+          AWS_REGION: ${{ secrets.DEV_AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
 
       - name: Generate documentation
         run: pnpm run gen-doc
