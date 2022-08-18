@@ -21,6 +21,7 @@ jobs:
       STAGE: ${{ inputs.environment }}
       CONTEXT_ENV: ${{ inputs.context }}
       NODE_VERSION: 14.x
+      ACCOUNT_ID: ${{ secrets.DEV_ACCOUNT_ID }}
 
     steps:
       - uses: actions/checkout@v2
