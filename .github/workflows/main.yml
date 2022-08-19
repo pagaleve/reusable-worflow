@@ -141,7 +141,7 @@ jobs:
           NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update readme
-        if: ${{ inputs.updateReadme == true }}
+        if: ${{ inputs.updateReadme == true && inputs.envitonment == 'prod' }}
         uses: readmeio/rdme@7.0.1
         with:
           rdme: openapi ./swagger-doc.json --key=${{secrets.README_API_KEY}} --id=${{secrets.README_API_DEFINITION_ID}}
