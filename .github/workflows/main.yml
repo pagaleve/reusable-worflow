@@ -85,13 +85,13 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
 
       - name: Generating coverage badges
-        if: ${{ github.ref == 'refs/heads/main' && inputs.environment == 'stage' }}
+        if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && inputs.environment == 'stage' }}
         uses: jpb06/jest-badges-action@latest
         env:
           HUSKY: 0
           tag: "--no-verify"
         with:
-          branches: main
+          branches: main, master
 
       - name: Deploy ${{ inputs.environment }}
         if: ${{ inputs.environment != 'prod'  }}
