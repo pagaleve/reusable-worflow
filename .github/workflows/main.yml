@@ -15,6 +15,10 @@ on:
         type: boolean
         description: a boolean to determine if this service doc should be updated on readme
         required: true
+      applyMigration:
+        type: boolean
+        description: a boolean to determine if migration step should be invoked
+        required: true
 
 jobs:
   deploy:
@@ -108,7 +112,7 @@ jobs:
           ACCOUNT_ID: ${{ secrets.PROD_ACCOUNT_ID }}
 
       - name: Apply migrations ${{ inputs.environment }}
-        if: ${{ inputs.environment != 'prod'  }}
+        if: ${{ inputs.environment != 'prod' && inputs.applyMigration == true }}
         run: pnpm run migration -- ${{ inputs.environment }}
         env:
           AWS_REGION: ${{ secrets.DEV_AWS_REGION }}
@@ -116,7 +120,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
 
       - name: Apply migrations prod
-        if: ${{ inputs.environment == 'prod' }}
+        if: ${{ inputs.environment == 'prod' && inputs.applyMigration == true }}
         run: pnpm run migration -- ${{ inputs.environment }}
         env:
           AWS_REGION: ${{ secrets.PROD_AWS_REGION }}
