@@ -9,7 +9,11 @@ on:
         required: true
       context:
         type: string
-        description: context to get organization secrets.DEV_ACCOUNT_ID
+        description: context to get organization secrets
+        required: true
+      updateReadme:
+        type: boolean
+        description: a boolean to determine if this service doc should be updated on readme
         required: true
 
 jobs:
@@ -60,7 +64,7 @@ jobs:
       - name: Build
         run: pnpm run build
 
-      - name: Unit Test
+      - name: Unit Test ${{ inputs.environment }}
         if: ${{ inputs.environment != 'prod'  }}
         run: pnpm run test:unit
         env:
@@ -68,7 +72,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
 
-      - name: Unit Test
+      - name: Unit Test prod
         if: ${{ inputs.environment == 'prod'  }}
         run: pnpm run test:unit
         env:
@@ -103,6 +107,22 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
           ACCOUNT_ID: ${{ secrets.PROD_ACCOUNT_ID }}
 
+      - name: Apply migrations ${{ inputs.environment }}
+        if: ${{ inputs.environment != 'prod'  }}
+        run: pnpm run migration -- ${{ inputs.environment }}
+        env:
+          AWS_REGION: ${{ secrets.DEV_AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
+
+      - name: Apply migrations prod
+        if: ${{ inputs.environment == 'prod' }}
+        run: pnpm run migration -- ${{ inputs.environment }}
+        env:
+          AWS_REGION: ${{ secrets.PROD_AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
+
       - name: Integration Test
         if: ${{ inputs.environment != 'prod' }}
         run: pnpm run test:e2e
@@ -117,6 +137,7 @@ jobs:
           NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update readme
+        if: ${{ inputs.updateReadme == true }}
         uses: readmeio/rdme@7.0.1
         with:
           rdme: openapi ./swagger-doc.json --key=${{secrets.README_API_KEY}} --id=${{secrets.README_API_DEFINITION_ID}}
