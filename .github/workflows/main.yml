@@ -110,12 +110,20 @@ jobs:
           ACCOUNT_ID: ${{ secrets.PROD_ACCOUNT_ID }}
 
       - name: Apply migrations ${{ inputs.environment }}
-        if: ${{ inputs.applyMigration == true }}
+        if: ${{ inputs.applyMigration == true && inputs.environment != 'prod' }}
         run: pnpm run migration -- ${{ inputs.environment }}
         env:
           AWS_REGION: ${{ secrets.DEV_AWS_REGION }}
           AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
+
+      - name: Apply migrations prod
+        if: ${{ inputs.applyMigration == true && inputs.environment == 'prod' }}
+        run: pnpm run migration -- prod
+        env:
+          AWS_REGION: ${{ secrets.PROD_AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
 
       - name: Serverless DynamoDB Run Migrations ${{ inputs.environment }}
         if: ${{ contains(github.event.repository.name, 'decision-service') && inputs.environment != 'prod'}}
@@ -132,7 +140,7 @@ jobs:
         if: ${{ contains(github.event.repository.name, 'decision-service') && inputs.environment == 'prod'}}
         uses: serverless/github-action@master
         with:
-          args: dynamodb:seed --stage stage
+          args: dynamodb:seed --stage prod
         env:
           SLS_DEBUG: "*"
           AWS_REGION: ${{ secrets.PROD_AWS_REGION }}
@@ -213,7 +221,6 @@ jobs:
               break
             fi
           done
-          
   publish-gpr:
     needs: check_shared_modified
     if: needs.check_shared_modified.outputs.shared_folder_modified == 'true'
