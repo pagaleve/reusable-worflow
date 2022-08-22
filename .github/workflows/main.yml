@@ -32,6 +32,10 @@ jobs:
       GPR_AUTH_TOKEN: ${{ secrets.GPR_AUTH_TOKEN }}
       SENTRY_DSN_URL: ${{ secrets.SENTRY_DSN_URL }}
       SENTRY_TRACES_SAMPLE_RATE: ${{ secrets.SENTRY_TRACES_SAMPLE_RATE }}
+      AWS_REGION: ${{ inputs.environment == 'prod' && secrets.PROD_AWS_REGION || secrets.DEV_AWS_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ inputs.environment == 'prod' && secrets.PROD_AWS_ACCESS_KEY_ID || secrets.DEV_AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ inputs.environment == 'prod' && secrets.PROD_AWS_SECRET_ACCESS_KEY || secrets.DEV_AWS_SECRET_ACCESS_KEY}}
+      ACCOUNT_ID: ${{ inputs.environment == 'prod' && secrets.PROD_ACCOUNT_ID || secrets.DEV_ACCOUNT_ID}}
 
     steps:
       - uses: actions/checkout@v3
@@ -67,20 +71,7 @@ jobs:
         run: pnpm run build
 
       - name: Unit Test ${{ inputs.environment }}
-        if: ${{ inputs.environment != 'prod'  }}
         run: pnpm run test:unit
-        env:
-          AWS_REGION: ${{ secrets.DEV_AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
-
-      - name: Unit Test prod
-        if: ${{ inputs.environment == 'prod'  }}
-        run: pnpm run test:unit
-        env:
-          AWS_REGION: ${{ secrets.PROD_AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
 
       - name: Generating coverage badges
         if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && inputs.environment == 'stage' }}
@@ -92,87 +83,18 @@ jobs:
           branches: main, master
 
       - name: Deploy ${{ inputs.environment }}
-        if: ${{ inputs.environment != 'prod'  }}
         run: pnpm run deploy -- ${{ inputs.environment }}
-        env:
-          AWS_REGION: ${{ secrets.DEV_AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
-          ACCOUNT_ID: ${{ secrets.DEV_ACCOUNT_ID }}
-
-      - name: Deploy prod
-        if: ${{ inputs.environment == 'prod' }}
-        run: pnpm run deploy -- prod
-        env:
-          AWS_REGION: ${{ secrets.PROD_AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
-          ACCOUNT_ID: ${{ secrets.PROD_ACCOUNT_ID }}
 
       - name: Apply migrations ${{ inputs.environment }}
-        if: ${{ inputs.applyMigration == true && inputs.environment != 'prod' }}
+        if: ${{ inputs.applyMigration == true }}
         run: pnpm run migration -- ${{ inputs.environment }}
-        env:
-          AWS_REGION: ${{ secrets.DEV_AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
-
-      - name: Apply migrations prod
-        if: ${{ inputs.applyMigration == true && inputs.environment == 'prod' }}
-        run: pnpm run migration -- prod
-        env:
-          AWS_REGION: ${{ secrets.PROD_AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
-
-      - name: Serverless DynamoDB Run Migrations ${{ inputs.environment }}
-        if: ${{ contains(github.event.repository.name, 'decision-service') && inputs.environment != 'prod'}}
-        uses: serverless/github-action@master
-        with:
-          args: dynamodb:seed --stage stage
-        env:
-          SLS_DEBUG: "*"
-          AWS_REGION: ${{ secrets.DEV_AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
-
-      - name: Serverless DynamoDB Run Migrations prod
-        if: ${{ contains(github.event.repository.name, 'decision-service') && inputs.environment == 'prod'}}
-        uses: serverless/github-action@master
-        with:
-          args: dynamodb:seed --stage prod
-        env:
-          SLS_DEBUG: "*"
-          AWS_REGION: ${{ secrets.PROD_AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
-
-      - name: Start local dynamo
-        if: ${{ contains(github.event.repository.name, 'decision-service') && inputs.environment == 'stage' }}
-        run: docker run -p 8000:8000 -d --name dynamo amazon/dynamodb-local -jar DynamoDBLocal.jar -sharedDb
-        env:
-          AWS_REGION: ${{ secrets.DEV_AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
-
-      - name: Apply local migrations
-        if: ${{ contains(github.event.repository.name, 'decision-service') && inputs.environment == 'stage' }}
-        run: pnpm run local-migration
-        env:
-          DYNAMO_ENDPOINT: http://localhost:8000/
-          AWS_REGION: ${{ secrets.DEV_AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
 
       - name: Integration Test
         if: ${{ inputs.environment != 'prod' }}
         run: pnpm run test:e2e
-        env:
-          AWS_REGION: ${{ secrets.DEV_AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
 
       - name: Generate documentation
+        if: ${{ inputs.updateReadme == true }}
         run: pnpm run gen-doc
         env:
           NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -221,6 +143,7 @@ jobs:
               break
             fi
           done
+
   publish-gpr:
     needs: check_shared_modified
     if: needs.check_shared_modified.outputs.shared_folder_modified == 'true'
