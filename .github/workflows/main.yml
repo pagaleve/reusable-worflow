@@ -32,6 +32,10 @@ jobs:
       GPR_AUTH_TOKEN: ${{ secrets.GPR_AUTH_TOKEN }}
       SENTRY_DSN_URL: ${{ secrets.SENTRY_DSN_URL }}
       SENTRY_TRACES_SAMPLE_RATE: ${{ secrets.SENTRY_TRACES_SAMPLE_RATE }}
+      AWS_REGION: ${{ inputs.environment == 'prod' && secrets.PROD_AWS_REGION || secrets.DEV_AWS_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ inputs.environment == 'prod' && secrets.PROD_AWS_ACCESS_KEY_ID || secrets.DEV_AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ inputs.environment == 'prod' && secrets.PROD_AWS_SECRET_ACCESS_KEY || secrets.DEV_AWS_SECRET_ACCESS_KEY}}
+      ACCOUNT_ID: ${{ inputs.environment == 'prod' && secrets.PROD_ACCOUNT_ID || secrets.DEV_ACCOUNT_ID}}
 
     steps:
       - uses: actions/checkout@v3
@@ -49,7 +53,6 @@ jobs:
           echo "@pagaleve:registry=https://npm.pkg.github.com" > ~/.npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ env.GPR_AUTH_TOKEN }}" >> ~/.npmrc
           echo "registry=https://registry.npmjs.com" >> ~/.npmrc
-
       - name: Cache pnpm modules
         uses: actions/cache@v2
         with:
@@ -57,7 +60,6 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-
-
       - uses: pnpm/action-setup@v2.1.0
         with:
           version: 6.29.2
@@ -69,20 +71,7 @@ jobs:
         run: pnpm run build
 
       - name: Unit Test ${{ inputs.environment }}
-        if: ${{ inputs.environment != 'prod'  }}
         run: pnpm run test:unit
-        env:
-          AWS_REGION: ${{ secrets.DEV_AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
-
-      - name: Unit Test prod
-        if: ${{ inputs.environment == 'prod'  }}
-        run: pnpm run test:unit
-        env:
-          AWS_REGION: ${{ secrets.PROD_AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
 
       - name: Generating coverage badges
         if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && inputs.environment == 'stage' }}
@@ -94,54 +83,24 @@ jobs:
           branches: main, master
 
       - name: Deploy ${{ inputs.environment }}
-        if: ${{ inputs.environment != 'prod'  }}
         run: pnpm run deploy -- ${{ inputs.environment }}
-        env:
-          AWS_REGION: ${{ secrets.DEV_AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
-          ACCOUNT_ID: ${{ secrets.DEV_ACCOUNT_ID }}
-
-      - name: Deploy prod
-        if: ${{ inputs.environment == 'prod' }}
-        run: pnpm run deploy -- prod
-        env:
-          AWS_REGION: ${{ secrets.PROD_AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
-          ACCOUNT_ID: ${{ secrets.PROD_ACCOUNT_ID }}
 
       - name: Apply migrations ${{ inputs.environment }}
-        if: ${{ inputs.environment != 'prod' && inputs.applyMigration == true }}
+        if: ${{ inputs.applyMigration == true }}
         run: pnpm run migration -- ${{ inputs.environment }}
-        env:
-          AWS_REGION: ${{ secrets.DEV_AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
-
-      - name: Apply migrations prod
-        if: ${{ inputs.environment == 'prod' && inputs.applyMigration == true }}
-        run: pnpm run migration -- ${{ inputs.environment }}
-        env:
-          AWS_REGION: ${{ secrets.PROD_AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
 
       - name: Integration Test
         if: ${{ inputs.environment != 'prod' }}
         run: pnpm run test:e2e
-        env:
-          AWS_REGION: ${{ secrets.DEV_AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
 
       - name: Generate documentation
+        if: ${{ inputs.updateReadme == true }}
         run: pnpm run gen-doc
         env:
           NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update readme
-        if: ${{ inputs.updateReadme == true && inputs.envitonment == 'prod' }}
+        if: ${{ inputs.updateReadme == true }}
         uses: readmeio/rdme@7.0.1
         with:
           rdme: openapi ./swagger-doc.json --key=${{secrets.README_API_KEY}} --id=${{secrets.README_API_DEFINITION_ID}}
@@ -210,7 +169,6 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-
-
       - uses: pnpm/action-setup@v2.1.0
         with:
           version: 6.29.2
