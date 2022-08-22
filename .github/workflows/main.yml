@@ -49,7 +49,6 @@ jobs:
           echo "@pagaleve:registry=https://npm.pkg.github.com" > ~/.npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ env.GPR_AUTH_TOKEN }}" >> ~/.npmrc
           echo "registry=https://registry.npmjs.com" >> ~/.npmrc
-
       - name: Cache pnpm modules
         uses: actions/cache@v2
         with:
@@ -57,7 +56,6 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-
-
       - uses: pnpm/action-setup@v2.1.0
         with:
           version: 6.29.2
@@ -112,20 +110,51 @@ jobs:
           ACCOUNT_ID: ${{ secrets.PROD_ACCOUNT_ID }}
 
       - name: Apply migrations ${{ inputs.environment }}
-        if: ${{ inputs.environment != 'prod' && inputs.applyMigration == true }}
+        if: ${{ inputs.applyMigration == true }}
         run: pnpm run migration -- ${{ inputs.environment }}
         env:
           AWS_REGION: ${{ secrets.DEV_AWS_REGION }}
           AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
 
-      - name: Apply migrations prod
-        if: ${{ inputs.environment == 'prod' && inputs.applyMigration == true }}
-        run: pnpm run migration -- ${{ inputs.environment }}
+      - name: Serverless DynamoDB Run Migrations ${{ inputs.environment }}
+        if: ${{ contains(github.event.repository.name, 'decision-service') && inputs.environment != 'prod'}}
+        uses: serverless/github-action@master
+        with:
+          args: dynamodb:seed --stage stage
         env:
+          SLS_DEBUG: "*"
+          AWS_REGION: ${{ secrets.DEV_AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
+
+      - name: Serverless DynamoDB Run Migrations prod
+        if: ${{ contains(github.event.repository.name, 'decision-service') && inputs.environment == 'prod'}}
+        uses: serverless/github-action@master
+        with:
+          args: dynamodb:seed --stage stage
+        env:
+          SLS_DEBUG: "*"
           AWS_REGION: ${{ secrets.PROD_AWS_REGION }}
           AWS_ACCESS_KEY_ID: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
+
+      - name: Start local dynamo
+        if: ${{ contains(github.event.repository.name, 'decision-service') && inputs.environment == 'stage' }}
+        run: docker run -p 8000:8000 -d --name dynamo amazon/dynamodb-local -jar DynamoDBLocal.jar -sharedDb
+        env:
+          AWS_REGION: ${{ secrets.DEV_AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
+
+      - name: Apply local migrations
+        if: ${{ contains(github.event.repository.name, 'decision-service') && inputs.environment == 'stage' }}
+        run: pnpm run local-migration
+        env:
+          DYNAMO_ENDPOINT: http://localhost:8000/
+          AWS_REGION: ${{ secrets.DEV_AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_ACCESS_KEY }}
 
       - name: Integration Test
         if: ${{ inputs.environment != 'prod' }}
@@ -141,7 +170,7 @@ jobs:
           NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update readme
-        if: ${{ inputs.updateReadme == true && inputs.envitonment == 'prod' }}
+        if: ${{ inputs.updateReadme == true }}
         uses: readmeio/rdme@7.0.1
         with:
           rdme: openapi ./swagger-doc.json --key=${{secrets.README_API_KEY}} --id=${{secrets.README_API_DEFINITION_ID}}
@@ -184,7 +213,7 @@ jobs:
               break
             fi
           done
-
+          
   publish-gpr:
     needs: check_shared_modified
     if: needs.check_shared_modified.outputs.shared_folder_modified == 'true'
@@ -210,7 +239,6 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-
-
       - uses: pnpm/action-setup@v2.1.0
         with:
           version: 6.29.2
