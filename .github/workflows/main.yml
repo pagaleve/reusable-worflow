@@ -31,6 +31,10 @@ jobs:
       GPR_AUTH_TOKEN: ${{ secrets.GPR_AUTH_TOKEN }}
       SENTRY_DSN_URL: ${{ secrets.SENTRY_DSN_URL }}
       SENTRY_TRACES_SAMPLE_RATE: ${{ secrets.SENTRY_TRACES_SAMPLE_RATE }}
+      KANASTRA_ORIGINATOR_ID: ${{ secrets.KANASTRA_ORIGINATOR_ID }}
+      KANASTRA_URL: ${{ secrets.KANASTRA_URL }}
+      KANASTRA_API_CLIENT_ID: ${{ secrets.KANASTRA_API_CLIENT_ID }}
+      KANASTRA_API_CLIENT_SECRET: ${{ secrets.KANASTRA_API_CLIENT_SECRET }}
       AWS_REGION: ${{ inputs.environment == 'prod' && secrets.PROD_AWS_REGION || secrets.DEV_AWS_REGION }}
       AWS_ACCESS_KEY_ID: ${{ inputs.environment == 'prod' && secrets.PROD_AWS_ACCESS_KEY_ID || secrets.DEV_AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ inputs.environment == 'prod' && secrets.PROD_AWS_SECRET_ACCESS_KEY || secrets.DEV_AWS_SECRET_ACCESS_KEY}}
