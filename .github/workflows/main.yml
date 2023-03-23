@@ -19,7 +19,12 @@ on:
         type: boolean
         description: a boolean to determine if migration step should be invoked
         required: true
-
+      shouldRelease:
+        type: boolean
+        description: a boolean to determine if release step should be invoked
+        required: false
+        default: true
+      
 jobs:
   deploy:
     environment: ${{ inputs.environment }}
@@ -109,7 +114,7 @@ jobs:
           rdme: openapi ./swagger-doc.json --key=${{secrets.README_API_KEY}} --id=${{secrets.README_API_DEFINITION_ID}}
 
       - name: Release
-        if: ${{ inputs.environment == 'stage' }}
+        if: ${{ inputs.environment == 'stage' && inputs.shouldRelease == true }}
         env:
           GH_TOKEN: ${{ secrets.PAT_PAGALEVESOURCE_MANAGE_REPO }}
           NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
