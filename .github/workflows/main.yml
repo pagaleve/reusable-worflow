@@ -48,7 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          token: ${{ secrets.PAT_PAGALEVESOURCE_MANAGE_REPO }}
+          token: ${{ secrets.PAT_PAGALEVESOURCE_PACKAGE_WRITE }}
           fetch-depth: 0
 
       - name: Use Node.js ${{ env.NODE_VERSION }}
@@ -105,7 +105,7 @@ jobs:
         if: ${{ inputs.updateReadme == true }}
         run: pnpm run gen-doc
         env:
-          NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.PAT_PAGALEVESOURCE_PACKAGE_WRITE }}
 
       - name: Update readme
         if: ${{ inputs.updateReadme == true }}
@@ -116,7 +116,7 @@ jobs:
       - name: Release
         if: ${{ inputs.environment == 'stage' && inputs.shouldRelease == true }}
         env:
-          GH_TOKEN: ${{ secrets.PAT_PAGALEVESOURCE_MANAGE_REPO }}
-          NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          GH_TOKEN: ${{ secrets.PAT_PAGALEVESOURCE_PACKAGE_WRITE }}
+          NPM_TOKEN: ${{ secrets.PAT_PAGALEVESOURCE_PACKAGE_WRITE }}
+          NODE_AUTH_TOKEN: ${{secrets.PAT_PAGALEVESOURCE_PACKAGE_WRITE}}
         run: pnpm run release
