@@ -24,6 +24,11 @@ on:
         description: a boolean to determine if release step should be invoked
         required: false
         default: true
+      nodeVersion:
+        type: string
+        description: nodejs version as default 14.x
+        required: false
+        default: 14.x
       
 jobs:
   deploy:
@@ -32,7 +37,7 @@ jobs:
     env:
       STAGE: ${{ inputs.environment }}
       CONTEXT_ENV: ${{ inputs.context }}
-      NODE_VERSION: 14.x
+      NODE_VERSION: ${{ inputs.nodeVersion }}
       GPR_AUTH_TOKEN: ${{ secrets.PAT_PAGALEVESOURCE_PACKAGE_READ }}
       SENTRY_DSN_URL: ${{ secrets.SENTRY_DSN_URL }}
       SENTRY_TRACES_SAMPLE_RATE: ${{ secrets.SENTRY_TRACES_SAMPLE_RATE }}
