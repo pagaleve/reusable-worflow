@@ -32,7 +32,6 @@ on:
 
 jobs:
   deploy:
-    if: "!contains(github.event.head_commit.message , '[hotfix]') && ${{ inputs.environment != 'prod'}}"
     environment: ${{ inputs.environment }}
     runs-on: ubuntu-latest
     env:
