@@ -24,6 +24,11 @@ on:
         description: a boolean to determine if release step should be invoked
         required: false
         default: true
+      generateCoverageBadges:
+        type: boolean
+        description: a boolean to determine if generate coverage badges should be invoked
+        required: false
+        default: true
       
 jobs:
   deploy:
@@ -82,7 +87,7 @@ jobs:
         run: pnpm run test:unit
 
       - name: Generating coverage badges
-        if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && inputs.environment == 'stage' }}
+        if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && inputs.environment == 'stage' && inputs.generateCoverageBadges == true }}
         uses: jpb06/jest-badges-action@latest
         env:
           HUSKY: 0
