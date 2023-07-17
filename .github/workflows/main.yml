@@ -91,14 +91,14 @@ jobs:
       - name: Unit Test ${{ inputs.environment }}
         run: pnpm run test:unit
 
-      - name: Generating coverage badges
-        if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && inputs.environment == 'stage' && inputs.generateCoverageBadges == true }}
-        uses: jpb06/jest-badges-action@latest
-        env:
-          HUSKY: 0
-          tag: "--no-verify"
-        with:
-          branches: main, master
+#       - name: Generating coverage badges
+#         if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && inputs.environment == 'stage' && inputs.generateCoverageBadges == true }}
+#         uses: jpb06/jest-badges-action@latest
+#         env:
+#           HUSKY: 0
+#           tag: "--no-verify"
+#         with:
+#           branches: main, master
 
       - name: Deploy ${{ inputs.environment }}
         run: pnpm run deploy -- ${{ inputs.environment }}
