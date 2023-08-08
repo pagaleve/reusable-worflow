@@ -126,7 +126,7 @@ jobs:
       - name: Release
         if: ${{ inputs.environment == 'stage' && inputs.shouldRelease == true }}
         env:
-          GH_TOKEN: ${{ secrets.PAT_PAGALEVESOURCE_PACKAGE_WRITE }}
-          NPM_TOKEN: ${{ secrets.PAT_PAGALEVESOURCE_PACKAGE_WRITE }}
-          NODE_AUTH_TOKEN: ${{secrets.PAT_PAGALEVESOURCE_PACKAGE_WRITE}}
+          GH_TOKEN: ${{ secrets.PAT_PAGALEVESOURCE_MANAGE_REPO }}
+          NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
         run: pnpm run release
