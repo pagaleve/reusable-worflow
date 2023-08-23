@@ -58,8 +58,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          token: ${{ secrets.PAT_PAGALEVESOURCE_PACKAGE_WRITE }}
-          fetch-depth: 0
+          persist-credentials: false
 
       - name: Use Node.js ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v3
