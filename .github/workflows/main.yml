@@ -35,6 +35,21 @@ on:
         required: false
         default: 14.x
 
+permissions:
+  actions: write
+  checks: write
+  contents: write
+  deployments: write
+  id-token: write
+  issues: write
+  discussions: write
+  packages: write
+  pages: write
+  pull-requests: write
+  repository-projects: write
+  security-events: write
+  statuses: write
+
 jobs:
   deploy:
     environment: ${{ inputs.environment }}
@@ -43,7 +58,6 @@ jobs:
       STAGE: ${{ inputs.environment }}
       CONTEXT_ENV: ${{ inputs.context }}
       NODE_VERSION: ${{ inputs.nodeVersion }}
-      GPR_AUTH_TOKEN: ${{ secrets.PAT_PAGALEVESOURCE_PACKAGE_READ }}
       SENTRY_DSN_URL: ${{ secrets.SENTRY_DSN_URL }}
       SENTRY_TRACES_SAMPLE_RATE: ${{ secrets.SENTRY_TRACES_SAMPLE_RATE }}
       KANASTRA_ORIGINATOR_ID: ${{ secrets.KANASTRA_ORIGINATOR_ID }}
@@ -68,7 +82,7 @@ jobs:
       - name: Authenticate with GitHub package registry
         run: |
           echo "@pagaleve:registry=https://npm.pkg.github.com" > ~/.npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ env.GPR_AUTH_TOKEN }}" >> ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ env.GITHUB_TOKEN }}" >> ~/.npmrc
           echo "registry=https://registry.npmjs.com" >> ~/.npmrc
       - name: Cache pnpm modules
         uses: actions/cache@v2
