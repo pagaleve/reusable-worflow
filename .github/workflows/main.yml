@@ -84,7 +84,7 @@ jobs:
       - name: Authenticate with GitHub package registry
         run: |
           echo "@pagaleve:registry=https://npm.pkg.github.com" > ~/.npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ env.GITHUB_TOKEN }}" >> ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ env.GPR_AUTH_TOKEN }}" >> ~/.npmrc
           echo "registry=https://registry.npmjs.com" >> ~/.npmrc
       - name: Cache pnpm modules
         uses: actions/cache@v2
