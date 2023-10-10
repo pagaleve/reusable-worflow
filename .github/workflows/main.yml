@@ -36,7 +36,7 @@ on:
         default: 14.x
       pnpmVersion:
         type: string
-        description: pnpm version as default 8.8.0
+        description: pnpm version as default 6.29.2
         required: false
         default: 6.29.2
 
