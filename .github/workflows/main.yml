@@ -34,6 +34,11 @@ on:
         description: nodejs version as default 14.x
         required: false
         default: 14.x
+      pnpmVersion:
+        type: string
+        description: pnpm version as default 6.29.2
+        required: false
+        default: 6.29.2
 
 permissions:
   actions: write
@@ -58,6 +63,7 @@ jobs:
       STAGE: ${{ inputs.environment }}
       CONTEXT_ENV: ${{ inputs.context }}
       NODE_VERSION: ${{ inputs.nodeVersion }}
+      PNPM_VERSION: ${{ inputs.pnpmVersion }}
       SENTRY_DSN_URL: ${{ secrets.SENTRY_DSN_URL }}
       SENTRY_TRACES_SAMPLE_RATE: ${{ secrets.SENTRY_TRACES_SAMPLE_RATE }}
       KANASTRA_ORIGINATOR_ID: ${{ secrets.KANASTRA_ORIGINATOR_ID }}
@@ -95,7 +101,7 @@ jobs:
             ${{ runner.os }}-
       - uses: pnpm/action-setup@v2.1.0
         with:
-          version: 6.29.2
+          version: ${{ env.PNPM_VERSION }}
 
       - name: Install NPM Dependencies
         run: pnpm install --frozen-lockfile
