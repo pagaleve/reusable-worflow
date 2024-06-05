@@ -19,6 +19,11 @@ on:
         type: boolean
         description: a boolean to determine if migration step should be invoked
         required: true
+      localDynamo:
+        type: boolean
+        description: a boolean to determine if local dynamo docker invoked
+        required: false
+        default: false
       shouldRelease:
         type: boolean
         description: a boolean to determine if release step should be invoked
@@ -108,6 +113,16 @@ jobs:
 
       - name: Build
         run: pnpm run build
+
+        
+      - name: Local Dynamo Start
+        if: ${{ inputs.environment != 'prod' && inputs.localDynamo == true }}
+        run: pnpm run local-dynamo-run
+
+
+      - name: Local Dynamo Migrate
+        if: ${{ inputs.environment != 'prod' && inputs.localDynamo == true }}
+        run: pnpm run dynamo-migrate
 
       - name: Unit Test ${{ inputs.environment }}
         run: pnpm run test:unit
