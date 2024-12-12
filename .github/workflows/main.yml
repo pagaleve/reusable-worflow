@@ -144,6 +144,10 @@ jobs:
         run: pnpm run migration -- ${{ inputs.environment }}
 
       - name: Integration Test
+        if: ${{ inputs.environment == 'stage' }}
+        run: pnpm run test:int
+
+      - name: E2E Test
         if: ${{ inputs.environment != 'prod' }}
         run: pnpm run test:e2e
 
