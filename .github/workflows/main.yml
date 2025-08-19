@@ -44,7 +44,11 @@ on:
         description: pnpm version as default 6.29.2
         required: false
         default: 6.29.2
-
+      enablePrePostScripts:
+        type: boolean
+        description: a boolean to determine if enable pre post scripts should be invoked
+        required: false
+        default: false
 permissions:
   actions: write
   checks: write
@@ -97,7 +101,7 @@ jobs:
           echo "@pagaleve:registry=https://npm.pkg.github.com" > ~/.npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ env.GITHUB_TOKEN }}" >> ~/.npmrc
           echo "registry=https://registry.npmjs.com" >> ~/.npmrc
-          echo "enable-pre-post-scripts=true" >> ~/.npmrc
+          echo "enable-pre-post-scripts=${{ inputs.enablePrePostScripts }}" >> ~/.npmrc
       - name: Cache pnpm modules
         uses: actions/cache@v2
         with:
