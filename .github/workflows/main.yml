@@ -97,6 +97,7 @@ jobs:
           echo "@pagaleve:registry=https://npm.pkg.github.com" > ~/.npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ env.GITHUB_TOKEN }}" >> ~/.npmrc
           echo "registry=https://registry.npmjs.com" >> ~/.npmrc
+          echo "enable-pre-post-scripts=true" >> ~/.npmrc
       - name: Cache pnpm modules
         uses: actions/cache@v2
         with:
@@ -114,11 +115,9 @@ jobs:
       - name: Build
         run: pnpm run build
 
-        
       - name: Local Dynamo Start
         if: ${{ inputs.environment != 'prod' && inputs.localDynamo == true }}
         run: pnpm run local-dynamo-run
-
 
       - name: Local Dynamo Migrate
         if: ${{ inputs.environment != 'prod' && inputs.localDynamo == true }}
@@ -127,14 +126,14 @@ jobs:
       - name: Unit Test ${{ inputs.environment }}
         run: pnpm run test:unit
 
-#       - name: Generating coverage badges
-#         if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && inputs.environment == 'stage' && inputs.generateCoverageBadges == true }}
-#         uses: jpb06/jest-badges-action@latest
-#         env:
-#           HUSKY: 0
-#           tag: "--no-verify"
-#         with:
-#           branches: main, master
+      #       - name: Generating coverage badges
+      #         if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && inputs.environment == 'stage' && inputs.generateCoverageBadges == true }}
+      #         uses: jpb06/jest-badges-action@latest
+      #         env:
+      #           HUSKY: 0
+      #           tag: "--no-verify"
+      #         with:
+      #           branches: main, master
 
       - name: Deploy ${{ inputs.environment }}
         run: pnpm run deploy -- ${{ inputs.environment }}
