@@ -1,0 +1,13 @@
+name: reusable-worflow
+id: ari:cloud:compass:af8146a7-7c7d-42f3-a993-6920c682799e:component/fc7a1c13-9733-41ec-b591-0e5bff7a7284/2f8cd424-7460-4de6-a6f2-892ba2dd7664
+description: Reusable Worfklow
+configVersion: 1
+typeId: SERVICE
+fields:
+  tier: 4
+links: []
+relationships:
+  DEPENDS_ON: []
+labels:
+  - source:github
+customFields: null
